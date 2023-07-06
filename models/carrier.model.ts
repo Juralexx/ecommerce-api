@@ -15,10 +15,26 @@ const CarrierModel: Schema = new mongoose.Schema(
             type: Number,
             required: true,
         },
+        delivery_estimate: {
+            minimum: {
+                type: Number,
+                min: 0,
+                required: true
+            },
+            maximum: {
+                type: Number,
+                min: 0,
+                required: true
+            },
+        },
         published: {
             type: Boolean,
             default: false
         }
+    },
+    {
+        timestamps: true,
+        minimize: false
     }
 );
 
