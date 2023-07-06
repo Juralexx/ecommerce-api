@@ -1,11 +1,10 @@
 import Stripe from 'stripe';
 import express from 'express';
-import mongoose from 'mongoose';
 import OrderModel from '../models/order.model.js';
 import CustomerModel from '../models/customer.model.js';
 import CartModel from '../models/cart.model.js';
 import { sendOrderConfirmEmail, sendPaymentConfirmEmail } from '../email/email.controller.js';
-import { ICarrier } from 'types/types.js';
+import mongoose from 'mongoose';
 
 //Create a new Stripe instance
 const stripe = new Stripe(process.env.STRIPE_PRIVATE_API_KEY, {
@@ -15,35 +14,17 @@ const stripe = new Stripe(process.env.STRIPE_PRIVATE_API_KEY, {
 //Payment express router
 const paymentRoutes = express.Router();
 
-//Variable that will contain the order cart
-//We define at the root of the file so we can access it in all functions
-let orderCart: any[] = [];
-
-//Variable that will contain the current order cart ID
-//After the order payment is validated we will be able thanks to this variable
-//to delete the cart document from the 'cart' database collection
-let cartID: mongoose.Types.ObjectId = null;
-
-//Variable that will contain the choosen delivery carrier
-//We define a variable because Stripe do not return the full carrier object, just the shipping fees total
-let shippingCarrier: ICarrier = null;
-
 /**
  * Route that launch the stripe payment interface
  */
 
 paymentRoutes.post('/create-checkout-session', async (req, res) => {
     //Retrieve cart and user from req.body
-    const { cart, carrier, cartId, user } = req.body;
+    const { user, checkout } = req.body;
+    const { cart, cartId, codePromo, carrier, billing_address, delivery_address } = checkout;
 
     //Variable the will contain the customer created in the stripe database
     let customer;
-    //Assign the cart to the 'orderCart' variable
-    orderCart = [...cart];
-    //Assign the cart ID the 'cartID' variable
-    cartID = cartId;
-    //Assign the carrier to the 'shippingCarrier' variable
-    shippingCarrier = carrier;
 
     //Check if the user is already a customer and exists in the stripe database
     const isCustomer = await stripe.customers.search({
@@ -70,66 +51,83 @@ paymentRoutes.post('/create-checkout-session', async (req, res) => {
     //Create the products array passed to stripe to retrieve them in the payment instance
     const line_items = cart.map((item: any) => {
         return {
-            price_data: {
-                currency: 'eur',
-                product_data: {
-                    name: item.name,
-                    images: [`${process.env.SERVER_URL}${item.image}`],
-                    description: `Pot : ${item.variant.size}L - Hauteur : ${item.variant.height}cm`,
-                    metadata: {
+            "price_data": {
+                "currency": 'eur',
+                "product_data": {
+                    "name": item.name,
+                    "images": [encodeURI(`${process.env.SERVER_URL}${item.image}`)],
+                    "description": `Pot : ${item.variant.size}L - Hauteur : ${item.variant.height}cm`,
+                    "metadata": {
                         id: item._id
                     }
                 },
-                unit_amount: Math.round(item.price * 100)
+                "unit_amount": Math.round(item.price * 100)
             },
-            quantity: item.quantity
+            "quantity": item.quantity
         }
     });
 
-    //Retrieve the carrier properties
     const { _id, name, description, price, delivery_estimate } = carrier;
 
     //Create the session passed to the stripe payment instance
     const session = await stripe.checkout.sessions.create({
-        mode: 'payment',
-        payment_method_types: ['card'],
-        shipping_address_collection: {
-            allowed_countries: ['FR'],
-        },
-        billing_address_collection: 'required',
-        shipping_options: [{
-            shipping_rate_data: {
-                type: 'fixed_amount',
-                fixed_amount: {
-                    amount: (price * 100),
-                    currency: 'eur',
-                },
-                display_name: name,
-                delivery_estimate: {
-                    minimum: {
-                        unit: 'business_day',
-                        value: delivery_estimate.minimum,
+        "mode": 'payment',
+        "payment_method_types": ['card'],
+        "shipping_options": [
+            {
+                shipping_rate_data: {
+                    type: 'fixed_amount',
+                    fixed_amount: {
+                        amount: (price * 100),
+                        currency: 'eur',
                     },
-                    maximum: {
-                        unit: 'business_day',
-                        value: delivery_estimate.maximum,
+                    display_name: name,
+                    delivery_estimate: {
+                        minimum: {
+                            unit: 'business_day',
+                            value: delivery_estimate.minimum,
+                        },
+                        maximum: {
+                            unit: 'business_day',
+                            value: delivery_estimate.maximum,
+                        }
+                    },
+                    metadata: {
+                        _id: String(_id),
+                        name: name,
+                        description: description
                     }
-                },
-                metadata: {
-                    _id: String(_id),
-                    name: name,
-                    description: description
                 }
             }
-        }],
-        customer: customer.id,
-        line_items: line_items,
-        success_url: `${process.env.SITE_URL}/order/success`,
-        cancel_url: `${process.env.SITE_URL}/order/canceled`
+        ],
+        "customer": customer.id,
+        "line_items": line_items,
+        "metadata": {
+            orderId: new mongoose.Types.ObjectId().toString(),
+            cartId: cartId,
+            code_promo: JSON.stringify(codePromo),
+            carrier: JSON.stringify(carrier),
+            billing_address: JSON.stringify(billing_address),
+            delivery_address: JSON.stringify(delivery_address),
+        },
+        "success_url": `${process.env.SITE_URL}/order/success?session_id={CHECKOUT_SESSION_ID}`,
+        "cancel_url": `${process.env.SITE_URL}/order/fail?session_id={CHECKOUT_SESSION_ID}`
     });
 
     res.send({ url: session.url });
 })
+
+/**
+ * Retrieve session and customer informations on successful payment
+ */
+
+paymentRoutes.get('/order/success', async (req, res) => {
+    const { session_id } = req.query;
+    const session = await stripe.checkout.sessions.retrieve(session_id as string);
+    const customer = await stripe.customers.retrieve(session.customer as string);
+
+    res.status(200).send({ session, customer });
+});
 
 //Stripe webhook
 
@@ -174,48 +172,65 @@ paymentRoutes.post('/webhook', express.raw({ type: '*/*' }), async (req: any, re
         eventType = req.body.type;
     }
 
+    const { orderId, cartId, code_promo, carrier, billing_address, delivery_address } = stripe_response_datas.metadata;
+
+    let cart: any;
+
+    await CartModel
+        .find({ _id: cartId })
+        .populate({
+            path: 'products.product',
+            select: '_id name category images promotions variants',
+            populate: [{
+                path: 'images',
+                select: '_id name path',
+            }, {
+                path: 'category',
+                select: '_id name parent link',
+            }, {
+                path: 'promotions',
+            }]
+        })
+        .then(docs => {
+            //Create the products objects passed to the order stored in the database
+            return cart = docs[0]?.products?.map((cartItem: any) => {
+                //Get current product and quantity
+                const { product, quantity } = cartItem;
+                //Find the variant stored in the database through all the product variant
+                const variant = product?.variants.find((el: any) => el._id.toHexString() === cartItem.variant.toHexString());
+                //If the variant still exists
+                if (variant) {
+                    return {
+                        name: product.name,
+                        product: product._id,
+                        variant: variant,
+                        original_price: variant.price,
+                        promotion: variant.promotion,
+                        price: variant.price - ((variant.promotion / 100) * variant.price),
+                        taxe: variant.taxe,
+                        quantity: quantity
+                    }
+                }
+            })
+        })
+        .catch(err => console.log(err))
+
     //If the stripe event type is a valid payment
-    if (eventType === "checkout.session.completed") {
+    if ((cart && cart?.length > 0) && eventType === "checkout.session.completed") {
         stripe.customers
             //Return the current customer from the stripe database
             .retrieve(stripe_response_datas.customer)
             .then(async (customer: any) => {
-                //Create the products objects passed to the order stored in the database
-                const products = orderCart.map((product: any) => {
-                    return {
-                        product: product._id,
-                        variant: product.variant,
-                        original_price: product.original_price,
-                        promotion: product.promotion,
-                        price: product.price,
-                        taxe: product.taxe,
-                        quantity: product.quantity
-                    }
-                });
                 //Assign current date to the date prop
                 const date = new Date();
                 //Retrieve the payment_method from the stripe event
                 const payment_method = stripe_response_datas.payment_method_types[0];
-                //Delivery address object
-                const delivery_address = {
-                    street: stripe_response_datas.shipping_details.address.line1,
-                    postcode: stripe_response_datas.shipping_details.address.postal_code,
-                    city: stripe_response_datas.shipping_details.address.city
-                };
-                //Billing address object
-                const billing_address = {
-                    street: stripe_response_datas.shipping_details.address.line1,
-                    postcode: stripe_response_datas.shipping_details.address.postal_code,
-                    city: stripe_response_datas.shipping_details.address.city
-                };
                 //Get the current customer ID
                 const customerId = customer.metadata.userId;
-                //Get order carrier
-                const carrier = shippingCarrier;
                 //Get order shipping fees
-                const shipping_fees = carrier.price;
+                const shipping_fees = JSON.parse(carrier).price;
                 //Get price from stripe datas
-                const price = (stripe_response_datas.amount_total * 100);
+                const price = (stripe_response_datas.amount_total / 100);
                 //Get order payment status
                 const payment_status = stripe_response_datas.payment_status;
                 //Get order status based on the payment status
@@ -262,18 +277,19 @@ paymentRoutes.post('/webhook', express.raw({ type: '*/*' }), async (req: any, re
 
                 //Pass all values to the order
                 const order = {
+                    _id: orderId,
                     customer: customerId,
-                    date: date,
-                    payment_method: payment_method,
-                    payment_status: payment_status,
-                    delivery_address: delivery_address,
-                    billing_address: billing_address,
-                    products: products,
-                    price: price,
-                    carrier: carrier,
-                    shipping_fees: shipping_fees,
-                    status: status,
-                    timeline: timeline
+                    date,
+                    payment_method,
+                    payment_status,
+                    delivery_address: JSON.parse(delivery_address),
+                    billing_address: JSON.parse(billing_address),
+                    products: cart,
+                    price,
+                    carrier: JSON.parse(carrier),
+                    shipping_fees,
+                    status,
+                    timeline
                 };
 
                 //Create order database document
@@ -296,25 +312,29 @@ paymentRoutes.post('/webhook', express.raw({ type: '*/*' }), async (req: any, re
                         sendOrderConfirmEmail({
                             ...order,
                             _id: docs._id,
-                            products: orderCart,
-                            customer: customer
+                            products: cart,
+                            customer: customer,
+                            total: price,
+                            shipping_fees: shipping_fees
                         })
                         //Send payment confirm email to the customer
                         sendPaymentConfirmEmail({
                             ...order,
                             _id: docs._id,
-                            products: orderCart,
-                            customer: customer
+                            products: cart,
+                            customer: customer,
+                            total: price,
+                            shipping_fees: shipping_fees
                         });
                     });
 
                 //Delete the order cart from the 'cart' database collection
                 await CartModel
-                    .findByIdAndDelete({ _id: cartID })
+                    .findByIdAndDelete({ _id: cartId })
                     .exec()
             })
             .catch(err => {
-                console.log(err)
+                console.log(err);
                 return res.status(400).send({ message: err });
             })
     }
@@ -323,7 +343,7 @@ paymentRoutes.post('/webhook', express.raw({ type: '*/*' }), async (req: any, re
     res.send().end();
 });
 
-export default paymentRoutes
+export default paymentRoutes;
 
 /**
  * Return the order status based on the payment_status

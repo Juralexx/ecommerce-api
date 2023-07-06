@@ -1,44 +1,53 @@
 import mongoose from 'mongoose'
 const ObjectID = mongoose.Types.ObjectId
 import { Request, Response } from 'express'
-import CategoryModel from "../models/category.model.ts";
+import CategoryModel from "../models/category.model.js";
 import { ICategory } from '../types/types';
-import { categoryErrors } from '../errors/categories.errors.ts';
+import { categoryErrors } from '../errors/categories.errors.js';
+import { cache } from '../app.js';
 
 /**
  * Create category
  */
 
 export const createCategory = async (req: Request, res: Response) => {
-    const { name, link, content, parent, image } = req.body as ICategory
+    //Body request destructuration
+    const { name, link, content, parent, image } = req.body as ICategory;
 
+    //Database document creation
     await CategoryModel.create({
         name: name,
-        link: link,
+        link: '/category' + link,
         content: content,
         parent: parent,
-        image: image._id
+        image: image
     })
         .then(docs => {
-            return res.send(docs)
+            //We send the response to client
+            return res.send(docs);
         })
         .catch(err => {
+            //If theres's errors we convert them to human readable message and send 'em
             const errors = categoryErrors(err);
-            return res.status(400).send({ errors })
-        })
-}
+            return res.status(400).send({ errors });
+        });
+};
 
 /**
  * Update category
  */
 
 export const updateCategory = async (req: Request, res: Response) => {
-    const { name, link, content, parent, image } = req.body as ICategory
+    //Body request destructuration
+    const { name, link, content, parent, image } = req.body as ICategory;
 
+    //Check that the id params exists
     if (req.params.id) {
+        //Check if the id params is a valide MongoDB ID
         if (!ObjectID.isValid(req.params.id))
             return res.status(400).send("ID unknown : " + req.params.id);
         else {
+            //If the ID is valide we find the document based on it and trigger an update
             await CategoryModel.findByIdAndUpdate({
                 _id: req.params.id
             }, {
@@ -47,7 +56,7 @@ export const updateCategory = async (req: Request, res: Response) => {
                     link: link,
                     content: content,
                     parent: parent,
-                    image: image._id
+                    image: image
                 },
             }, {
                 new: true,
@@ -55,12 +64,17 @@ export const updateCategory = async (req: Request, res: Response) => {
                 context: 'query',
             })
                 .then(docs => {
-                    return res.send(docs)
+                    //Clear the current object caches
+                    cache.del(`/api/categories`);
+                    cache.del(`/api/categories/${req.params.id}`);
+                    //We send the response to client
+                    return res.send(docs);
                 })
                 .catch(err => {
+                    //If theres's errors we convert them to human readable message and send 'em
                     const errors = categoryErrors(err);
-                    return res.status(400).send({ errors })
-                })
-        }
-    }
+                    return res.status(400).send({ errors });
+                });
+        };
+    };
 };
