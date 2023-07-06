@@ -2,22 +2,16 @@
     "compilerOptions": {
         "target": "es5",
         "lib": [
-            "dom",
-            "dom.iterable",
-            "esnext"
+            "es5",
         ],
         "module": "esnext",
         "moduleResolution": "node",
         "isolatedModules": true,
-        "noEmit": true,
-        "allowImportingTsExtensions": true,
         "strict": true,
         "forceConsistentCasingInFileNames": true,
         "noFallthroughCasesInSwitch": true,
         "declaration": false,
         "removeComments": true,
-        "emitDecoratorMetadata": true,
-        "experimentalDecorators": true,
         "allowSyntheticDefaultImports": true,
         "allowJs": true,
         "sourceMap": false,
@@ -35,7 +29,6 @@
         "esm": true
     },
     "exclude": [
-        "admin",
         "node_modules"
     ]
 }
