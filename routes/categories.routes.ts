@@ -1,7 +1,7 @@
 import express, { Request, Response } from 'express'
-import { updateCategory, createCategory } from '../controllers/categories.controller.ts'
-import CategoryModel from '../models/category.model.ts'
-import { deleteOne, getAll, getOne } from '../controllers/default.controllers.ts'
+import { updateCategory, createCategory } from '../controllers/categories.controller.js'
+import CategoryModel from '../models/category.model.js'
+import { deleteOne, getAll, getOne } from '../controllers/default.controllers.js'
 
 const categoriesRoutes = express.Router()
 
