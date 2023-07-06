@@ -1,7 +1,7 @@
 import express, { Request, Response} from 'express'
-import NavigationModel from '../models/navigation.model.ts'
-import { updateNavigation } from '../controllers/navigation.controller.ts'
-import { getAll } from '../controllers/default.controllers.ts'
+import NavigationModel from '../models/navigation.model.js'
+import { updateNavigation } from '../controllers/navigation.controller.js'
+import { getAll } from '../controllers/default.controllers.js'
 
 const navigationRoutes = express.Router()
 
