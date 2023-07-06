@@ -20,25 +20,11 @@ const OrderModel: Schema = new mongoose.Schema(
         },
         delivery_address: {
             type: Object,
-            required: true,
-            adress: {
-                street: String,
-                postcode: String,
-                city: String,
-                department: String,
-                region: String
-            }
+            required: true
         },
         billing_address: {
             type: Object,
-            required: true,
-            adress: {
-                street: String,
-                postcode: String,
-                city: String,
-                department: String,
-                region: String
-            }
+            required: true
         },
         products: [
             {
