@@ -208,7 +208,7 @@ export const removeSpecialChars = (string) => {
  */
 
 export const sanitize = (string) => {
-    const sanitized = string.replace(/[&\/\\#,+()$~%'":_*?<>{}]/g, '')
+    const sanitized = string.replace(/[&\/\\#,+()$~%'":*?<>{}]/g, '')
     return sanitized
 }
 
@@ -236,6 +236,7 @@ export const convertStringToRegexp = (text) => {
         .replace(/n/g, '[n,ñ]')
         .replace(/[ªº°]/g, '[ªº°]')
         .replace(/-|\s/g, '[ -]') // replace spaces and hyphens
+    
     return new RegExp(regexp, 'i'); // "i" -> ignore case
 };
 
@@ -1207,11 +1208,11 @@ export const getDifference = (one, two) => {
 
 export const convertStringToURL = (str) => {
     let URL = str.toLowerCase();
+    URL = removeAccents(URL);
     URL = URL.charAt(0).toLowerCase() + URL.slice(1);
     URL = URL.replace(/[^\w ]/g, " ")
     URL = URL.replace(/ +/g, " ")
     URL = URL.trim()
-    URL = removeAccents(URL)
     URL = URL.replace(/ /g, "-")
     return URL
 }
