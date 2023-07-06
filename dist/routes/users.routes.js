@@ -1,0 +1,14 @@
+import express from 'express';
+import UserModel from '../models/user.model.js';
+import { login, logout } from '../controllers/auth.controller.js';
+import { register, updateUser } from '../controllers/users.controller.js';
+import { deleteOne, getAll, getOne } from '../controllers/default.controllers.js';
+var usersRoutes = express.Router();
+usersRoutes.post('/register', register);
+usersRoutes.post('/login', function (req, res) { return login(req, res, UserModel); });
+usersRoutes.get('/logout', logout);
+usersRoutes.get('/', function (req, res) { return getAll(req, res, UserModel, { select: '-password' }); });
+usersRoutes.get('/:id', function (req, res) { return getOne(req, res, UserModel, { select: '-password' }); });
+usersRoutes.put('/:id/update', updateUser);
+usersRoutes.delete('/:id/delete', function (req, res) { return deleteOne(req, res, UserModel); });
+export default usersRoutes;

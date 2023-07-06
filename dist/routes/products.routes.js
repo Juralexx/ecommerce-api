@@ -1,0 +1,12 @@
+import express from 'express';
+import ProductModel from '../models/product.model.js';
+import { getProducts, updateProduct, createProduct, getProductByUrl } from '../controllers/products.controller.js';
+import { deleteOne, getOne } from '../controllers/default.controllers.js';
+var productsRoutes = express.Router();
+productsRoutes.get('/', getProducts);
+productsRoutes.get('/variant/:url', getProductByUrl);
+productsRoutes.get('/:id', function (req, res) { return getOne(req, res, ProductModel, { populate: 'images category promotions' }); });
+productsRoutes.post('/create', createProduct);
+productsRoutes.put('/:id/update', updateProduct);
+productsRoutes.delete('/:id/delete', function (req, res) { return deleteOne(req, res, ProductModel); });
+export default productsRoutes;

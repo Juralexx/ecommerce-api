@@ -1,0 +1,13 @@
+import express from 'express';
+import FilesModel from '../models/files.model.js';
+import { updateImage, upload, uploadImage, uploadImages } from '../controllers/upload.controller.js';
+import { deleteMedia } from '../controllers/medias.controller.js';
+import { getAll, getOne } from '../controllers/default.controllers.js';
+var mediasRoutes = express.Router();
+mediasRoutes.post('/upload/single', upload.single('file'), uploadImage);
+mediasRoutes.post('/upload/multiple', upload.array('files', 5), uploadImages);
+mediasRoutes.put('/:id/update', upload.single('file'), updateImage);
+mediasRoutes.get('/', function (req, res) { return getAll(req, res, FilesModel); });
+mediasRoutes.get('/:id', function (req, res) { return getOne(req, res, FilesModel); });
+mediasRoutes.delete('/:id/delete', deleteMedia);
+export default mediasRoutes;

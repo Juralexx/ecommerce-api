@@ -1,0 +1,14 @@
+import express from 'express';
+import CustomerModel from '../models/customer.model.js';
+import { login, logout } from '../controllers/auth.controller.js';
+import { getCustomers, register, updateCustomer } from '../controllers/customers.controller.js';
+import { deleteOne, getOne } from '../controllers/default.controllers.js';
+var customersRoutes = express.Router();
+customersRoutes.post('/register', register);
+customersRoutes.post('/login', function (req, res) { return login(req, res, CustomerModel); });
+customersRoutes.get('/logout', logout);
+customersRoutes.get('/', getCustomers);
+customersRoutes.get('/:id', function (req, res) { return getOne(req, res, CustomerModel, { select: '-password', populate: 'orders' }); });
+customersRoutes.put('/:id/update', updateCustomer);
+customersRoutes.delete('/:id/delete', function (req, res) { return deleteOne(req, res, CustomerModel); });
+export default customersRoutes;

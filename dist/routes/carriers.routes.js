@@ -1,0 +1,11 @@
+import express from 'express';
+import CarrierModel from '../models/carrier.model.js';
+import { deleteOne, getAll, getOne } from '../controllers/default.controllers.js';
+import { createCarrier, updateCarrier } from '../controllers/carrier.controller.js';
+var carriersRoutes = express.Router();
+carriersRoutes.get('/', function (req, res) { return getAll(req, res, CarrierModel); });
+carriersRoutes.get('/:id', function (req, res) { return getOne(req, res, CarrierModel); });
+carriersRoutes.post('/create', createCarrier);
+carriersRoutes.put('/:id/update', updateCarrier);
+carriersRoutes.delete('/:id/delete', function (req, res) { return deleteOne(req, res, CarrierModel); });
+export default carriersRoutes;
