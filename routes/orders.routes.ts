@@ -1,7 +1,7 @@
 import express, { Request, Response } from 'express'
-import OrderModel from '../models/order.model.ts'
-import { deleteOne, getOne } from '../controllers/default.controllers.ts'
-import { createOrder, getOrders, updateOrder } from '../controllers/orders.controller.ts'
+import OrderModel from '../models/order.model.js'
+import { deleteOne, getOne } from '../controllers/default.controllers.js'
+import { createOrder, getOrders, updateOrder } from '../controllers/orders.controller.js'
 
 const ordersRoutes = express.Router()
 
