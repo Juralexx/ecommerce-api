@@ -11,7 +11,7 @@ export const userErrors = (err: any) => {
         errors.email = "Veuillez saisir un email valide.";
 
     if (err.code === 11000 && Object.keys(err.keyValue)[0].includes("email"))
-        errors.email = "Un compte est déjà assigné à cet email.";
+        errors.email = "Un compte est déjà rattaché à cet email.";
 
     if (err.message.includes("password"))
         errors.password = `Votre mot de passe ne respecte pas les conditions requises, celui-ci doit contenir au moins :
