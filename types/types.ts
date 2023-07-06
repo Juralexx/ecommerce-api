@@ -14,6 +14,7 @@ export interface UserDocument extends mongoose.Model<DefaultUser> {
 }
 
 export interface Img {
+    _id?: mongoose.Types.ObjectId;
     name?: string | null;
     path?: string | null;
     size?: number | null;
@@ -70,6 +71,11 @@ export interface IPage {
     title: string;
     link: string;
     content: string;
+    category: {
+        name: string,
+        url: string
+    };
+    image: mongoose.Types.ObjectId;
 }
 
 export interface ICustomer extends DefaultUser {
@@ -88,16 +94,16 @@ export interface IProduct {
     category: mongoose.Types.ObjectId;
     promotions: mongoose.Types.ObjectId[];
     variants: IProductVariant[];
+    base_variant: IProductVariant;
     images?: mongoose.Types.ObjectId[];
     content: string;
     description: string;
-    tags: string[];
     details: Array<{ title: string, content: string }>;
 }
 
 export interface IProductVariant {
     _id: mongoose.Types.ObjectId,
-    width: string;
+    size: string;
     height: string;
     weight: string;
     color: string;
@@ -106,7 +112,10 @@ export interface IProductVariant {
     promotion: number;
     ref: string;
     taxe: number;
-    country: string;
+    country: {
+        name: string,
+        code: string
+    };
     url: string;
     barcode: string;
 }
@@ -121,7 +130,14 @@ export interface IOrder {
     payment_method: string;
     delivery_address: IAddress;
     billing_address: IAddress;
-    products: IProduct[];
+    products: {
+        product: IProduct;
+        variant: IProductVariant;
+        original_price: number;
+        promotion: number;
+        price: number;
+        quantity: number;
+    }[];
     customer: mongoose.Types.ObjectId;
     shipping_fees: number;
     price: number;
@@ -132,11 +148,16 @@ export interface IOrder {
 }
 
 export interface IAddress {
+    name: string,
+    lastname: string,
+    society: string;
     street: string;
+    complement: string;
     postcode: string;
     city: string;
-    department: string;
-    region: string;
+    department?: string;
+    region?: string;
+    phone: string;
 }
 
 export interface ICarrier {
@@ -145,6 +166,10 @@ export interface ICarrier {
     description: string;
     price: number;
     published: boolean;
+    delivery_estimate: {
+        minimum: number,
+        maximum: number
+    }
 }
 
 export interface IPromotion {
