@@ -1,7 +1,7 @@
 import express, { Request, Response } from 'express'
-import CarrierModel from '../models/carrier.model.ts'
-import { deleteOne, getAll, getOne } from '../controllers/default.controllers.ts'
-import { createCarrier, updateCarrier } from '../controllers/carrier.controller.ts'
+import CarrierModel from '../models/carrier.model.js'
+import { deleteOne, getAll, getOne } from '../controllers/default.controllers.js'
+import { createCarrier, updateCarrier } from '../controllers/carrier.controller.js'
 
 const carriersRoutes = express.Router()
 
