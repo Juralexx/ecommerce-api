@@ -1,7 +1,7 @@
 import express, { Request, Response } from 'express'
-import CartModel from '../models/cart.model.ts'
-import { createCart, updateCart } from '../controllers/cart.controller.ts'
-import { deleteOne, getAll, getOne } from '../controllers/default.controllers.ts'
+import CartModel from '../models/cart.model.js'
+import { createCart, updateCart } from '../controllers/cart.controller.js'
+import { deleteOne, getAll, getOne } from '../controllers/default.controllers.js'
 
 const cartRoutes = express.Router()
 
