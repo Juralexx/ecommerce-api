@@ -1,15 +1,15 @@
 import { faker } from '@faker-js/faker';
 import mongoose from 'mongoose';
-import PromotionModel from '../../models/promotion.model.ts';
-import ProductModel from '../../models/product.model.ts';
-import CategoryModel from "../../models/category.model.ts";
+import PromotionModel from '../../models/promotion.model.js';
+import ProductModel from '../../models/product.model.js';
+import CategoryModel from "../../models/category.model.js";
 
 function randomIntFromInterval(min: number, max: number) {
     return Math.floor(Math.random() * (max - min + 1) + min);
 }
 
 async function getRandomProducts() {
-    const products: any = await ProductModel.aggregate([{ $sample: { size: randomIntFromInterval(1, 15) } }])
+    const products: any = await ProductModel.aggregate([{ $sample: { size: randomIntFromInterval(0, 15) } }])
 
     return products.map((product: any) => {
         return {
@@ -19,24 +19,13 @@ async function getRandomProducts() {
 }
 
 export async function getRandomCategories() {
-    const categories: any = await CategoryModel.aggregate([{ $sample: { size: randomIntFromInterval(1, 15) } }])
+    const categories: any = await CategoryModel.aggregate([{ $sample: { size: randomIntFromInterval(0, 3) } }])
 
     return categories.map((category: any) => {
         return {
             _id: category._id
         }
     })
-}
-
-async function getItemsBasedOnConditionType(conditionType: string) {
-    switch (conditionType) {
-        case 'products':
-            return { products: await getRandomProducts() }
-        case 'categories':
-            return { categories: await getRandomCategories() }
-        default:
-            return { products: await getRandomProducts() }
-    }
 }
 
 export async function createRandomPromotion() {
@@ -49,10 +38,10 @@ export async function createRandomPromotion() {
     const start_date = dates[0];
     const end_date = dates[1];
 
-    let is_active = false
+    let is_active = false;
 
     if (start_date < new Date() && end_date > new Date()) {
-        is_active = true
+        is_active = true;
     }
 
     let condition = {
@@ -66,15 +55,15 @@ export async function createRandomPromotion() {
             ...condition,
             products: await getRandomProducts(),
             categories: await getRandomCategories()
-        }
-    }
+        };
+    };
 
     if (condition.type !== 'all') {
         if (condition.categories.length > 0) {
-            condition.categories.forEach(async element => {
+            condition.categories.forEach(async category => {
                 try {
-                    await CategoryModel.findByIdAndUpdate({
-                        _id: element._id
+                    await ProductModel.updateMany({
+                        category: category._id
                     }, {
                         $addToSet: {
                             promotions: _id,
@@ -90,10 +79,10 @@ export async function createRandomPromotion() {
             })
         }
         if (condition.products.length > 0) {
-            condition.products.forEach(async element => {
+            condition.products.forEach(async product => {
                 try {
                     await ProductModel.findByIdAndUpdate({
-                        _id: element._id
+                        _id: product._id
                     }, {
                         $addToSet: {
                             promotions: _id,
@@ -134,14 +123,17 @@ export async function createRandomPromotion() {
 }
 
 export async function createRandomPromotions(length: number) {
-    let response: any[] = []
-    for (let i = 0; i < length; i++) {
-        let fake = new PromotionModel(await createRandomPromotion())
-        fake.save()
-            .catch(err => console.log(err))
+    let response: any[] = [];
 
-        response = [...response, fake]
+    for (let i = 0; i < length; i++) {
+        const promotion = await createRandomPromotion();
+
+        await PromotionModel.create({ ...promotion })
+            .then(docs => {
+                response = [...response, docs];
+            })
+            .catch(err => { throw new Error(err) })
     }
 
-    return response
+    return response;
 }

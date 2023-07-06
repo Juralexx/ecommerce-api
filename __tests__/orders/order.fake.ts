@@ -1,11 +1,10 @@
 import { faker } from '@faker-js/faker';
 import mongoose from 'mongoose';
-import OrderModel from '../../models/order.model.ts';
-import ProductModel from '../../models/product.model.ts';
-import CustomerModel from "../../models/customer.model.ts";
-import UserModel from "../../models/user.model.ts";
-import CarrierModel from "../../models/carrier.model.ts";
-import { departments, regions } from '../regions.js';
+import OrderModel from '../../models/order.model.js';
+import ProductModel from '../../models/product.model.js';
+import CustomerModel from "../../models/customer.model.js";
+import UserModel from "../../models/user.model.js";
+import CarrierModel from "../../models/carrier.model.js";
 
 function randomIntFromInterval(min: number, max: number) {
     return Math.floor(Math.random() * (max - min + 1) + min);
@@ -40,7 +39,7 @@ async function getRandomProducts() {
             promotion: variant.promotion,
             price: (variant.price - ((variant.promotion / 100) * variant.price)).toFixed(2),
             taxe: variant.taxe,
-            number: randomIntFromInterval(1, 4)
+            quantity: randomIntFromInterval(1, 4)
         }
     })
 }
@@ -76,29 +75,28 @@ function getStatusBasedOnPayment(payment_status: string) {
     }
 }
 
-export async function createRandomOrder() {
+export async function createRandomOrder(numbers: number, index: number) {
     const _id = new mongoose.Types.ObjectId();
-    const date = faker.date.past();
-    const payment_method = faker.helpers.arrayElement(['credit_card', 'bank_transfer', 'paypal']);
-    const delivery_address = {
-        street: faker.datatype.number({ min: 0, max: 200 }) + ' ' + faker.address.street(),
-        postcode: faker.address.zipCode('#####'),
-        city: faker.address.city(),
-        department: faker.helpers.arrayElement(departments),
-        region: faker.helpers.arrayElement(regions),
-    };
-    const billing_address = {
-        street: faker.datatype.number({ min: 0, max: 200 }) + ' ' + faker.address.street(),
-        postcode: faker.address.zipCode('#####'),
-        city: faker.address.city(),
-        department: faker.helpers.arrayElement(departments),
-        region: faker.helpers.arrayElement(regions),
-    };
+    const date = faker.date.past(2);
+    const payment_method = faker.helpers.arrayElement(['card']);
     const customer = await getRandomCustomer();
+    const address = {
+        name: customer.name,
+        lastname: customer.lastname,
+        society: '',
+        street: faker.address.streetAddress(),
+        complement: faker.address.streetAddress(),
+        postcode: faker.address.zipCode('#####'),
+        city: faker.address.city(),
+        phone: customer.phone
+    }
+    const delivery_address = address;
+    const billing_address = address;
     const products = await getRandomProducts();
     const carrier = await getRandomCarrier();
     const shipping_fees = carrier.price;
-    const payment_status = faker.helpers.arrayElement(['awaiting', 'paid', 'canceled']);
+    const statusArray = new Date(date).getTime() < (new Date().getTime() - 2 * 24 * 60 * 60 * 1000) ? ['paid'] : ['awaiting', 'paid'];
+    const payment_status = faker.helpers.arrayElement(statusArray);
     const status = faker.helpers.arrayElement(getStatusBasedOnPayment(payment_status));
     const timeline: any[] = []
 
@@ -106,7 +104,7 @@ export async function createRandomOrder() {
 
     const getPrice = () => {
         for (let i = 0; i < products.length; i++) {
-            const total = products[i].number * products[i].price
+            const total = products[i].quantity * products[i].price
             price = price + total;
         }
     }
@@ -128,10 +126,10 @@ export async function createRandomOrder() {
                 status: "awaiting",
                 date: new Date()
             }, {
-                type: "payment_status",
-                status: "canceled",
-                date: new Date()
-            }
+            type: "payment_status",
+            status: "canceled",
+            date: new Date()
+        }
         )
     }
     if (payment_status === 'paid') {
@@ -141,10 +139,10 @@ export async function createRandomOrder() {
                 status: "awaiting",
                 date: new Date()
             }, {
-                type: "payment_status",
-                status: "paid",
-                date: new Date()
-            }
+            type: "payment_status",
+            status: "paid",
+            date: new Date()
+        }
         )
     }
     if (status === 'accepted') {
@@ -163,11 +161,11 @@ export async function createRandomOrder() {
                 status: "accepted",
                 date: new Date()
             }, {
-                type: "order_status",
-                status: "preparation",
-                date: new Date(),
-                user: await getRandomUser()
-            }
+            type: "order_status",
+            status: "preparation",
+            date: new Date(),
+            user: await getRandomUser()
+        }
         )
     }
     if (status === 'completed') {
@@ -177,16 +175,16 @@ export async function createRandomOrder() {
                 status: "accepted",
                 date: new Date()
             }, {
-                type: "order_status",
-                status: "preparation",
-                date: new Date(),
-                user: await getRandomUser()
-            }, {
-                type: "order_status",
-                status: "completed",
-                date: new Date(),
-                user: await getRandomUser()
-            }
+            type: "order_status",
+            status: "preparation",
+            date: new Date(),
+            user: await getRandomUser()
+        }, {
+            type: "order_status",
+            status: "completed",
+            date: new Date(),
+            user: await getRandomUser()
+        }
         )
     }
     if (status === 'shipped') {
@@ -196,21 +194,21 @@ export async function createRandomOrder() {
                 status: "accepted",
                 date: new Date()
             }, {
-                type: "order_status",
-                status: "preparation",
-                date: new Date(),
-                user: await getRandomUser()
-            }, {
-                type: "order_status",
-                status: "completed",
-                date: new Date(),
-                user: await getRandomUser()
-            }, {
-                type: "order_status",
-                status: "shipped",
-                date: new Date(),
-                user: await getRandomUser()
-            }
+            type: "order_status",
+            status: "preparation",
+            date: new Date(),
+            user: await getRandomUser()
+        }, {
+            type: "order_status",
+            status: "completed",
+            date: new Date(),
+            user: await getRandomUser()
+        }, {
+            type: "order_status",
+            status: "shipped",
+            date: new Date(),
+            user: await getRandomUser()
+        }
         )
     }
 
@@ -258,14 +256,18 @@ export async function createRandomOrder() {
 }
 
 export async function createRandomOrders(length: number) {
-    let response: any[] = []
+    let response: any[] = [];
+
+    console.log(length);
 
     for (let i = 0; i < length; i++) {
-        let fake = new OrderModel(await createRandomOrder())
-        fake.save()
-            .catch(err => console.log(err))
+        const order = await createRandomOrder(length, i);
 
-        response = [...response, fake]
+        await OrderModel.create({ ...order })
+            .then(docs => {
+                response = [...response, docs];
+            })
+            .catch(err => { throw new Error(err) })
     }
-    return response
+    return response;
 }

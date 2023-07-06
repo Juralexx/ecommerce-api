@@ -1,8 +1,8 @@
 import { faker } from '@faker-js/faker';
-import { IUser, UserRole } from '../../types/types'
+import { IUser, UserRole } from '../../types/types.js'
 import mongoose from 'mongoose';
 import { generateStrongPassword } from '../../utils/utils.js';
-import UserModel from '../../models/user.model.ts';
+import UserModel from '../../models/user.model.js';
 
 export function createRandomUser(): IUser {
     const _id = new mongoose.Types.ObjectId();
@@ -28,15 +28,17 @@ export function createRandomUser(): IUser {
 }
 
 export async function createRandomUsers(length: number) {
-    let response: any[] = []
+    let response: any[] = [];
 
     for (let i = 0; i < length; i++) {
-        let fake = new UserModel(createRandomUser())
-        fake.save()
-            .catch(err => console.log(err))
+        const user = createRandomUser();
 
-        response = [...response, fake]
+        await UserModel.create({ ...user })
+            .then(docs => {
+                response = [...response, docs];
+            })
+            .catch(err => { throw new Error(err) })
     }
 
-    return response
+    return response;
 }
