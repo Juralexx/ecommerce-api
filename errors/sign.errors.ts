@@ -2,7 +2,7 @@
  * Signup errors
  */
 
-export const registerErrors = (err: any) => {
+export const userRegisterErrors = (err: any) => {
     let errors: Record<string, any> = {}
 
     if (err.message.includes("name"))
@@ -15,7 +15,7 @@ export const registerErrors = (err: any) => {
         errors.email = "Veuillez saisir un email valide.";
 
     if (err.code === 11000 && Object.keys(err.keyValue)[0].includes("email"))
-        errors.email = "Un compte est déjà assigné à cet email.";
+        errors.email = "Un compte est déjà rattaché à cet email.";
 
     if (err.message.includes("password"))
         errors.password = `Votre mot de passe ne respecte pas les conditions requises, celui-ci doit contenir au moins :
@@ -27,6 +27,26 @@ export const registerErrors = (err: any) => {
 
     if (err.message.includes("role"))
         errors.role = "Veuillez assigner un rôle.";
+
+    return errors;
+};
+
+export const customerRegisterErrors = (err: any) => {
+    let errors: Record<string, any> = {}
+
+    if (err.message.includes("email"))
+        errors.email = "Veuillez saisir un email valide.";
+
+    if (err.code === 11000 && Object.keys(err.keyValue)[0].includes("email"))
+        errors.email = "Un compte est déjà rattaché à cet email.";
+
+    if (err.message.includes("password"))
+        errors.password = `Votre mot de passe ne respecte pas les conditions requises, celui-ci doit contenir au moins :
+        ${'- Une majuscule'}
+        ${'- Une minuscule'}
+        ${'- Un chiffre'}
+        ${'- Un charactère spécial'}
+        ${'- Contenir 8 caractères'}`;
 
     return errors;
 };
