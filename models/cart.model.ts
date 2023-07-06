@@ -18,6 +18,10 @@ const CartModel: Schema = new mongoose.Schema(
                 }
             }
         ],
+    },
+    {
+        timestamps: true,
+        minimize: false
     }
 );
 
