@@ -13,6 +13,10 @@ const PageModel: Schema = new mongoose.Schema(
             required: true,
             trim: true,
         },
+        category: {
+            type: Object,
+            required: true,
+        },
         content: {
             type: String,
             required: true,
@@ -26,7 +30,16 @@ const PageModel: Schema = new mongoose.Schema(
                 validator: (val: string) => isValidPathname(val),
                 message: 'Veuillez saisir une URL valide.'
             }
-        }
+        },
+        image: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'media',
+            required: false
+        },
+    },
+    {
+        timestamps: true,
+        minimize: false
     }
 );
 
